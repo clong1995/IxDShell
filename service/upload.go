@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/qiniu/api.v7/storage"
-	"github.com/satori/go.uuid"
 	"golang.org/x/net/context"
 	"io/ioutil"
 	"log"
@@ -42,10 +41,14 @@ type qiniuFileInfoResp struct {
 	Msg  string `json:"msg"`
 	Data qiniuFileInfoRespData
 }
+
 type qiniuFileInfoRespData struct {
 	Hash     string  `json:"Hash"`
 	Fsize    float64 `json:"FSize"`
 	MimeType string  `json:"MimeType"`
+}
+type uploadFinishRes struct {
+	Id string `json:"id"`
 }
 
 type getUpKeyResp struct {
@@ -54,6 +57,11 @@ type getUpKeyResp struct {
 	Data struct {
 		UpToken string `json:"upToken"`
 	}
+}
+type addFileResp struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data string `json:"data"`
 }
 
 func md5Hex(str string) string {
@@ -163,10 +171,6 @@ func UploadOne(p *upload.One, Authorization string) error {
 	if err != nil {
 		return err
 	}
-	//文件id，留着上传完了，更新状态用
-	id := uuid.NewV4().String()
-	//后台上传
-	go uploadFile(p.LocalPath, upKey, etag, id)
 	//更新数据
 	mimetype := mime.TypeByExtension(path.Ext(p.LocalPath))
 	afs := addFileRes{
@@ -177,15 +181,25 @@ func UploadOne(p *upload.One, Authorization string) error {
 		Pid:      p.Pid,
 		State:    2,
 	}
-	_, err = util.HttpPostJson(CONF.ServerAddr+"/file/addFile", afs, header)
+	body, err := util.HttpPostJson(CONF.ServerAddr+"/file/addFile", afs, header)
 	if err != nil {
 		return err
 	}
+	//解析json
+	r := new(addFileResp)
+	err = json.Unmarshal(body, r)
+	if r.Code != 0 {
+		return fmt.Errorf(ERR_STR)
+	}
+
+	//后台上传
+	//文件id，留着上传完了，更新状态用
+	go uploadFile(p.LocalPath, upKey, etag, r.Data, Authorization)
 	return nil
 }
 
 //断点续传
-func uploadFile(localFile, upKey, etag, id string) error {
+func uploadFile(localFile, upKey, etag, id, Authorization string) error {
 	log.Println("触发断点续传！")
 	//==进度
 	// 必须仔细选择一个能标志上传唯一性的 recordKey 用来记录上传进度
@@ -249,9 +263,7 @@ func uploadFile(localFile, upKey, etag, id string) error {
 			//将进度序列化，然后写入文件
 			pr.Progresses[blkIdx] = *ret
 			progressBytes, _ := json.Marshal(pr)
-
-			//log.Printf(" blkIdx: %d, blkSize: %d, %v", blkIdx, blkSize, *ret)
-
+			log.Printf("blkIdx: %d", blkIdx)
 			wErr := ioutil.WriteFile(recordPath, progressBytes, 0644)
 			if wErr != nil {
 				log.Println("write progress file error,", wErr)
@@ -270,6 +282,16 @@ func uploadFile(localFile, upKey, etag, id string) error {
 		return err
 	}
 	//通知数据库
+	ufr := uploadFinishRes{
+		Id: id,
+	}
+	header := map[string]string{
+		"Authorization": Authorization,
+	}
+	_, err = util.HttpPostJson(CONF.ServerAddr+"/file/uploadFinish", ufr, header)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
