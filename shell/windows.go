@@ -2,33 +2,37 @@ package shell
 
 import (
 	. "IxDShell/config"
-	"github.com/zserge/webview"
+	"fmt"
+	"github.com/gen2brain/dlgs"
+	"github.com/zserge/lorca"
 	"log"
+	"time"
 )
 
 func StartWindows() {
-	//启动webview
-	w := webview.New(webview.Settings{
-		Width:                  1100,
-		Height:                 618,
-		Title:                  "IxD",
-		Resizable:              true,
-		URL:                    CONF.WebAddr + "/login",
-		ExternalInvokeCallback: winHandleRPC,
-	})
-	defer w.Exit()
-	w.Run()
-}
-
-func winHandleRPC(w webview.WebView, data string) {
-	switch {
-	case data == "close":
-		w.Terminate()
-	case data == "open":
-		file := w.Dialog(webview.DialogTypeOpen, 0, "Open file", "")
-		log.Println(file)
-	case data == "opendir":
-		dir := w.Dialog(webview.DialogTypeOpen, webview.DialogFlagDirectory, "Open directory", "")
-		log.Println(dir)
+	localhost := fmt.Sprintf("%s/login?t=%d&client=true", CONF.WebAddr, time.Now().Unix())
+	ui, err := lorca.New(localhost, "", 1100, 618, "--autoplay-policy=no-user-gesture-required")
+	if err != nil {
+		log.Fatal(err)
 	}
+	defer ui.Close()
+	err = ui.Bind("openFileDialog", func() {
+		//filename, ret, err := dlgs.File("Choose directory", "", true)
+		filename, ret, err := dlgs.File("Select file", "", false)
+		if err != nil {
+			log.Println(err)
+		}
+		if filename != "" && ret {
+			s := fmt.Sprintf(`externalInvokeOpen("%s")`, filename)
+			_ = ui.Eval(s)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	})
+	if err != nil {
+		log.Println(err)
+		log.Fatal(err)
+	}
+	<-ui.Done()
 }

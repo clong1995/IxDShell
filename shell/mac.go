@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/zserge/webview"
 	"log"
+	"time"
 )
 
 func StartMac() {
@@ -15,7 +16,7 @@ func StartMac() {
 		Height:                 618,
 		Title:                  "IxD",
 		Resizable:              true,
-		URL:                    CONF.WebAddr + "/login?client=true",
+		URL:                    fmt.Sprintf("%s/login?t=%d&client=true", CONF.WebAddr, time.Now().Unix()),
 		ExternalInvokeCallback: macHandleRPC,
 	})
 	defer w.Exit()
@@ -37,16 +38,16 @@ func macHandleRPC(w webview.WebView, data string) {
 		log.Println(err)
 	}
 	switch {
-	case p.Key == "open":
-		file := w.Dialog(webview.DialogTypeOpen, 0, "上传单文件", "")
-		if file != "" {
-			s := fmt.Sprintf(`externalInvokeOpen("%s")`, file)
+	case p.Key == "openFileDialog":
+		filename := w.Dialog(webview.DialogTypeOpen, 0, "上传单文件", "")
+		if filename != "" {
+			s := fmt.Sprintf(`externalInvokeOpen("%s")`, filename)
 			err := w.Eval(s)
 			if err != nil {
 				log.Println(err)
 			}
 		}
-	case p.Key == "openDir":
+	case p.Key == "openDirDialog":
 		dir := w.Dialog(webview.DialogTypeOpen, webview.DialogFlagDirectory, "上传文件夹", "")
 		if dir != "" {
 			log.Println(dir)

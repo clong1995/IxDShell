@@ -141,6 +141,7 @@ func UploadOne(p *upload.One, Authorization string) error {
 	header := map[string]string{
 		"Authorization": Authorization,
 	}
+
 	//===>查询是否在七牛存在，【触发秒传】
 	qiniuFileInfoData, err := qiniuFileInfo(etag, Authorization)
 	if err == nil {
@@ -169,6 +170,7 @@ func UploadOne(p *upload.One, Authorization string) error {
 	//获取上传凭证
 	upKey, err := getUpKey(Authorization)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	//更新数据
@@ -183,6 +185,7 @@ func UploadOne(p *upload.One, Authorization string) error {
 	}
 	body, err := util.HttpPostJson(CONF.ServerAddr+"/file/addFile", afs, header)
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	//解析json

@@ -12,8 +12,10 @@ type config struct {
 var CONF *config
 
 func init() {
-	serverAddr := flag.String("serverAddr", "http://127.0.0.1:50001", "服务端口")
-	webAddr := flag.String("webAddr", "http://127.0.0.1:50000", "界面端口")
+	addr := "127.0.0.1"
+	//addr := "quickex.com.cn"
+	serverAddr := flag.String("serverAddr", "http://"+addr+":50001", "服务端口")
+	webAddr := flag.String("webAddr", "http://"+addr+":50000", "界面端口")
 	httpAddr := flag.String("httpAddr", ":50003", "本地端口")
 	platform := flag.String("platform", "", "运行平台mac/windows")
 	flag.Parse()

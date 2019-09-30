@@ -14,5 +14,7 @@ func main() {
 	//启动http
 	go http.StartHttp("")
 	//mac客户端
-	shell.StartMac()
+	//shell.StartMac()
+	//windows客户端
+	shell.StartWindows()
 }
