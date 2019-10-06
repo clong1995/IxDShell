@@ -34,6 +34,7 @@ type addFileRes struct {
 	Name     string  `json:"name"`
 	Pid      string  `json:"pid"`
 	State    int     `json:"state"`
+	Local    string  `json:"local"`
 }
 
 type qiniuFileInfoResp struct {
@@ -182,6 +183,7 @@ func UploadOne(p *upload.One, Authorization string) error {
 		MimeType: mimetype,
 		Pid:      p.Pid,
 		State:    2,
+		Local:    p.LocalPath,
 	}
 	body, err := util.HttpPostJson(CONF.ServerAddr+"/file/addFile", afs, header)
 	if err != nil {
@@ -209,7 +211,7 @@ func uploadFile(localFile, upKey, etag, id, Authorization string) error {
 	// 我们这里采用 md5(key+local_path+local_file_last_modified)+".progress" 作为记录上传进度的文件名
 	fileInfo, _ := os.Stat(localFile)
 	fileSize := fileInfo.Size()
-	recordKey := md5Hex(fmt.Sprintf("%s:%s", etag, localFile)) + ".progress"
+	//recordKey := md5Hex(fmt.Sprintf("%s", etag))
 	// 指定的进度文件保存目录，实际情况下，请确保该目录存在，而且只用于记录进度文件
 	recordDir := os.TempDir() + "progress"
 	mErr := os.MkdirAll(recordDir, 0755)
@@ -217,7 +219,7 @@ func uploadFile(localFile, upKey, etag, id, Authorization string) error {
 		log.Println("mkdir for record dir error,", mErr)
 		return mErr
 	}
-	recordPath := filepath.Join(recordDir, recordKey)
+	recordPath := filepath.Join(recordDir, etag)
 	pr := progressRecord{}
 	//==尝试从旧的进度文件中读取进度
 	recordFp, openErr := os.Open(recordPath)
@@ -228,7 +230,6 @@ func uploadFile(localFile, upKey, etag, id, Authorization string) error {
 			if mErr == nil {
 				// 检查context 是否过期，避免701错误
 				for _, item := range pr.Progresses {
-					log.Println(item)
 					if storage.IsContextExpired(item) {
 						log.Println(item.ExpiredAt)
 						pr.Progresses = make([]storage.BlkputRet, storage.BlockCount(fileSize))
@@ -266,7 +267,6 @@ func uploadFile(localFile, upKey, etag, id, Authorization string) error {
 			//将进度序列化，然后写入文件
 			pr.Progresses[blkIdx] = *ret
 			progressBytes, _ := json.Marshal(pr)
-			log.Printf("blkIdx: %d", blkIdx)
 			wErr := ioutil.WriteFile(recordPath, progressBytes, 0644)
 			if wErr != nil {
 				log.Println("write progress file error,", wErr)
@@ -384,18 +384,29 @@ func UploadRestartTask(Authorization string) (interface{}, error) {
 	if len(files) == 0 {
 		return nil, fmt.Errorf("no progress")
 	}
+	etagArr := make([]string, 0)
+	for _, v := range files {
+		etagArr = append(etagArr, v.Name())
+	}
 
 	//请求未完成列表
+	type uploadingParam struct {
+		Etags []string `json:"etags"`
+	}
 	header := map[string]string{
 		"Authorization": Authorization,
 	}
-
-	body, err := util.HttpPostJson(CONF.ServerAddr+"/file/taskList", nil, header)
+	data := uploadingParam{
+		Etags: etagArr,
+	}
+	body, err := util.HttpPostJson(CONF.ServerAddr+"/file/uploading", data, header)
 	if err != nil {
 		return nil, err
 	}
 
+	//解析body
 	type item struct {
+		Id    string `json:"id"`
 		Local string `json:"local"`
 		Etag  string `json:"etag"`
 	}
@@ -405,30 +416,87 @@ func UploadRestartTask(Authorization string) (interface{}, error) {
 		Data []item
 	}
 	r := new(resp)
-	//解析json
 	err = json.Unmarshal(body, r)
 	if err != nil {
 		return nil, err
 	}
-	//所有远程未完成文件，结合本地文件筛选出需要继续上传的文件
-	remoteMap := make(map[string]item)
-	for _, s := range r.Data {
-		recordKey := md5Hex(fmt.Sprintf("%s:%s", s.Etag, s.Local)) + ".progress"
-		remoteMap[recordKey] = s
+	if len(r.Data) < 0 {
+		return nil, fmt.Errorf("no file")
 	}
+
 	//获取上传凭证
 	upKey, err := getUpKey(Authorization)
 	if err != nil {
 		return nil, err
 	}
-	//TODO 这里有严重高并发问题，大量未上传文件会占用过多线程和网络io，希望七牛内部有解决！！
-	for _, f := range files {
-		name := f.Name()
-		if v, ok := remoteMap[name]; ok {
-			log.Println(v, upKey)
-			//存在
-			//err = uploadFile(v.Local, upKey, v.Etag)
-		}
+
+	//TODO 这里有严重高并发问题，大量未上传文件会占用过多线程和网络io和磁盘io，希望七牛内部有解决！！
+	for _, s := range r.Data {
+		//localFile, upKey, etag, id, Authorization
+		go uploadFile(s.Local, upKey, s.Etag, s.Id, Authorization)
 	}
-	return files, nil
+
+	return r.Data, nil
+}
+
+//获取上传进度
+func LocalUpLoadingProgress() (string, error) {
+	recordDir := os.TempDir() + "progress"
+	_, err := os.Stat(recordDir)
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	fileInfoList, err := ioutil.ReadDir(recordDir)
+	progressMap := make(map[string]string, 0)
+	for _, v := range fileInfoList {
+		etag := v.Name()
+		//读取文件
+		recordPath := filepath.Join(recordDir, etag)
+		progressBytes, err := ioutil.ReadFile(recordPath)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		pr := progressRecord{}
+		err = json.Unmarshal(progressBytes, &pr)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		total := len(pr.Progresses)
+		cum := 0
+		for _, item := range pr.Progresses {
+			if item.Host != "" {
+				cum++
+			}
+		}
+
+		progressMap[etag] = fmt.Sprintf("%.2f", float32(cum)/float32(total)*100)
+	}
+	if len(progressMap) > 0 {
+		b, err := json.Marshal(progressMap)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
+		return string(b), nil
+	}
+	return "", nil
+}
+
+//获取正在上传的文件
+func LocalUpLoadingList() ([]string, error) {
+	recordDir := os.TempDir() + "progress"
+	_, err := os.Stat(recordDir)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	fileInfoList, err := ioutil.ReadDir(recordDir)
+	pathArr := make([]string, 0)
+	for _, v := range fileInfoList {
+		pathArr = append(pathArr, v.Name())
+	}
+	return pathArr, nil
 }

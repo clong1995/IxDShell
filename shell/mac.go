@@ -2,10 +2,12 @@ package shell
 
 import (
 	. "IxDShell/config"
+	"IxDShell/service"
 	"encoding/json"
 	"fmt"
 	"github.com/zserge/webview"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -52,6 +54,30 @@ func macHandleRPC(w webview.WebView, data string) {
 		if dir != "" {
 			log.Println(dir)
 			s := fmt.Sprintf(`externalInvokeOpenDir("%s")`, dir)
+			err := w.Eval(s)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	case p.Key == "getLoadingList":
+		pathArr, err := service.LocalUpLoadingList()
+		if err != nil {
+			return
+		}
+		if len(pathArr) > 0 {
+			s := fmt.Sprintf(`externalInvokeLoadingList("%s")`, strings.Join(pathArr, ","))
+			err := w.Eval(s)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	case p.Key == "getLoadingProgress":
+		mapStr, err := service.LocalUpLoadingProgress()
+		if err != nil {
+			return
+		}
+		if mapStr != "" {
+			s := fmt.Sprintf(`externalInvokeLoadingProgress(%s)`, mapStr)
 			err := w.Eval(s)
 			if err != nil {
 				log.Println(err)
