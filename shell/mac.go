@@ -52,7 +52,6 @@ func macHandleRPC(w webview.WebView, data string) {
 	case p.Key == "openDirDialog":
 		dir := w.Dialog(webview.DialogTypeOpen, webview.DialogFlagDirectory, "上传文件夹", "")
 		if dir != "" {
-			log.Println(dir)
 			s := fmt.Sprintf(`externalInvokeOpenDir("%s")`, dir)
 			err := w.Eval(s)
 			if err != nil {
@@ -82,6 +81,11 @@ func macHandleRPC(w webview.WebView, data string) {
 			if err != nil {
 				log.Println(err)
 			}
+		}
+	case p.Key == "restartTask":
+		_, err := service.UploadRestartTask(p.Value)
+		if err != nil {
+			return
 		}
 	}
 }
