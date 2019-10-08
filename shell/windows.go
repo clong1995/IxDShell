@@ -78,5 +78,17 @@ func StartWindows() {
 		log.Println(err)
 		log.Fatal(err)
 	}
+
+	//下载
+	err = ui.Bind("downloadFile", func(etag string) {
+		err := service.DownloadFile(etag)
+		if err != nil {
+			return
+		}
+	})
+	if err != nil {
+		log.Println(err)
+		log.Fatal(err)
+	}
 	<-ui.Done()
 }

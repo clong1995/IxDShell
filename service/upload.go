@@ -500,3 +500,9 @@ func LocalUpLoadingList() ([]string, error) {
 	}
 	return pathArr, nil
 }
+
+func DownloadFile(etag string) error {
+	log.Println(CONF.QiniuAddr + etag)
+
+	return nil
+}
