@@ -26,6 +26,7 @@ func StartWindows() {
 			log.Println(err)
 		}
 		if filename != "" && ret {
+			filename = strings.Replace(filename, "\\", "\\\\", -1)
 			s := fmt.Sprintf(`externalInvokeOpen("%s")`, filename)
 			_ = ui.Eval(s)
 		}
