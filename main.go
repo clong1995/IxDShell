@@ -32,7 +32,7 @@ func main() {
 	select {}*/
 
 	//mac客户端
-	//shell.StartMac()
+	shell.StartMac()
 	//windows客户端
-	shell.StartWindows()
+	//shell.StartWindows()
 }

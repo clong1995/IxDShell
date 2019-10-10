@@ -13,8 +13,8 @@ type config struct {
 var CONF *config
 
 func init() {
-	//addr := "127.0.0.1"
-	addr := "quickex.com.cn"
+	addr := "127.0.0.1"
+	//addr := "quickex.com.cn"
 	serverAddr := flag.String("serverAddr", "http://"+addr+":50001", "服务端口")
 	qiniuAddr := flag.String("qiniuAddr", "http://storage.quickex.com.cn/", "七牛服务")
 	webAddr := flag.String("webAddr", "http://"+addr+":50000", "界面端口")
