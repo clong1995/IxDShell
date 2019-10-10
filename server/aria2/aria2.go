@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -56,8 +57,18 @@ func StartAria2() error {
 }
 
 func launchAria2cDaemon(port int, dist string) (err error) {
+	aria2cFile := "aria2c"
+	switch runtime.GOOS {
+	case "darwin":
+		break
+	case "windows":
+		aria2cFile = "aria2c.exe"
+		break
+	case "linux":
+		break
+	}
 	//启动aria2的后台服务
-	cmdStr := fmt.Sprintf("./aria2c -d %s --enable-rpc --rpc-listen-all --rpc-listen-port=%d", dist, port)
+	cmdStr := fmt.Sprintf("./%s -d %s --enable-rpc --rpc-listen-all --rpc-listen-port=%d", aria2cFile, dist, port)
 	list := strings.Split(cmdStr, " ")
 	cmd := exec.Command(list[0], list[1:]...)
 	if err = cmd.Start(); err != nil {
