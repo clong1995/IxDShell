@@ -23,6 +23,41 @@ func StartMac() {
 		ExternalInvokeCallback: macHandleRPC,
 	})
 	defer w.Exit()
+
+	w.Dispatch(func() {
+
+		/*currDir, err := util.CurrDir()
+		if err != nil {
+			log.Println(err)
+		}
+		log.Println("------->", currDir)
+
+		s := fmt.Sprintf(`alert("%s")`, currDir)
+		_ = w.Eval(s)
+
+		log.Println(s)
+
+		files, _ := ioutil.ReadDir(currDir)
+		for _, f := range files {
+			log.Println("------->", f.Name())
+		}*/
+
+		/*err := aria2.StartAria2()
+		if err != nil {
+			//os.Exit(2)
+			s := fmt.Sprintf(`alert("%s")`, err.Error())
+			_ = w.Eval(s)
+		}*/
+
+		/*files, _ := ioutil.ReadDir("")
+		dirs := ""
+		for _, f := range files {
+			dirs += f.Name() + "||"
+		}
+		s := fmt.Sprintf(`alert("%s")`, dirs)
+		_ = w.Eval(s)*/
+	})
+
 	w.Run()
 }
 
@@ -40,6 +75,7 @@ func macHandleRPC(w webview.WebView, data string) {
 	if err != nil {
 		log.Println(err)
 	}
+
 	switch {
 	case p.Key == "openFileDialog":
 		filename := w.Dialog(webview.DialogTypeOpen, 0, "上传单文件", "")

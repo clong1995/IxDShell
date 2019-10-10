@@ -57,18 +57,30 @@ func StartAria2() error {
 }
 
 func launchAria2cDaemon(port int, dist string) (err error) {
-	aria2cFile := "aria2c"
+	currDir, err := util.CurrDir()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if strings.HasPrefix(currDir, "/private") {
+		currDir = ""
+	}
+	aria2cFilePath := ""
 	switch runtime.GOOS {
 	case "darwin":
+		aria2cFilePath = currDir + "/aria2c"
 		break
 	case "windows":
-		aria2cFile = "aria2c.exe"
+		aria2cFilePath = currDir + "/aria2c.exe"
 		break
 	case "linux":
 		break
 	}
+
+	log.Println(currDir)
+
 	//启动aria2的后台服务
-	cmdStr := fmt.Sprintf("./%s -d %s --enable-rpc --rpc-listen-all --rpc-listen-port=%d", aria2cFile, dist, port)
+	cmdStr := fmt.Sprintf(".%s -d %s --enable-rpc --rpc-listen-all --rpc-listen-port=%d", aria2cFilePath, dist, port)
 	list := strings.Split(cmdStr, " ")
 	cmd := exec.Command(list[0], list[1:]...)
 	if err = cmd.Start(); err != nil {

@@ -5,6 +5,7 @@ import (
 	"IxDShell/shell"
 	"log"
 	"os"
+	"time"
 )
 
 func init() {
@@ -12,6 +13,7 @@ func init() {
 }
 
 func main() {
+
 	//单独协程运行启动aria2
 	go func() {
 		err := aria2.StartAria2()
@@ -20,17 +22,17 @@ func main() {
 		}
 	}()
 
-	/*time.AfterFunc(3*time.Second, func() {
-		gid, err := aria2.DownloadUrl("http://storage.quickex.com.cn/lh3AglxbXpUIZR-O5s13UJm3Psei", "")
+	time.AfterFunc(3*time.Second, func() {
+		gid, err := aria2.DownloadUrl("http://storage.quickex.com.cn/Fgj6-s-0Z9bWP-AMRNJFK8SXfdmU", "")
 		if err != nil {
 			return
 		}
 		log.Println(gid)
 	})
-	select {}*/
+	//select {}
 
 	//mac客户端
-	//shell.StartMac()
+	shell.StartMac()
 	//windows客户端
-	shell.StartWindows()
+	//shell.StartWindows()
 }
