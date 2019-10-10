@@ -2,6 +2,7 @@ package shell
 
 import (
 	. "IxDShell/config"
+	"IxDShell/param/upload"
 	"IxDShell/service"
 	"encoding/json"
 	"fmt"
@@ -81,6 +82,23 @@ func macHandleRPC(w webview.WebView, data string) {
 			if err != nil {
 				log.Println(err)
 			}
+		}
+	//上传单个文件
+	case p.Key == "clientUploadOne":
+		//拆解参数
+		paramArr := strings.Split(p.Value, "||")
+		param := new(upload.One)
+		param.Pid = paramArr[0]
+		param.LocalPath = paramArr[1]
+		err := service.UploadOne(param, paramArr[2])
+		res := 0
+		if err != nil {
+			res = 1
+		}
+		s := fmt.Sprintf(`externalInvokeClientUploadOne(%d)`, res)
+		err = w.Eval(s)
+		if err != nil {
+			log.Println(err)
 		}
 	case p.Key == "restartTask":
 		_, err := service.UploadRestartTask(p.Value)

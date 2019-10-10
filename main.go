@@ -1,7 +1,6 @@
 package main
 
 import (
-	"IxDShell/server/http"
 	"IxDShell/shell"
 	"log"
 )
@@ -11,9 +10,6 @@ func init() {
 }
 
 func main() {
-	//TODO 后期去掉，启动http
-	go http.StartHttp("")
-
 	//单独协程运行启动aria2
 	/*go func() {
 		err := aria2.StartAria2()

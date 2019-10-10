@@ -2,6 +2,7 @@ package shell
 
 import (
 	. "IxDShell/config"
+	"IxDShell/param/upload"
 	"IxDShell/service"
 	"fmt"
 	"github.com/gen2brain/dlgs"
@@ -30,6 +31,24 @@ func StartWindows() {
 			s := fmt.Sprintf(`externalInvokeOpen("%s")`, filename)
 			_ = ui.Eval(s)
 		}
+	})
+	if err != nil {
+		log.Println(err)
+		log.Fatal(err)
+	}
+
+	//上传单个文件
+	err = ui.Bind("clientUploadOne", func(pid, localPath, Authorization string) {
+		p := new(upload.One)
+		p.Pid = pid
+		p.LocalPath = localPath
+		err := service.UploadOne(p, Authorization)
+		res := 0
+		if err != nil {
+			res = 1
+		}
+		s := fmt.Sprintf(`externalInvokeClientUploadOne(%d)`, res)
+		_ = ui.Eval(s)
 	})
 	if err != nil {
 		log.Println(err)
