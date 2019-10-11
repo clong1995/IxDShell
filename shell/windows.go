@@ -100,11 +100,29 @@ func StartWindows() {
 	}
 
 	//下载
-	err = ui.Bind("downloadFile", func(etag string) {
-		err := service.DownloadFile(etag)
+	err = ui.Bind("downloadFile", func(etag, name string) {
+		err := service.DownloadFile(etag, name)
 		if err != nil {
 			return
 		}
+	})
+	if err != nil {
+		log.Println(err)
+		log.Fatal(err)
+	}
+
+	//获取下载状态
+	err = ui.Bind("getDownloadProgress", func(Authorization string) {
+
+		service.DownloadProgress(Authorization)
+
+		/*if err != nil {
+			return
+		}
+		if mapStr != "" {
+			s := fmt.Sprintf(`externalInvokeDownloadProgress(%s)`, mapStr)
+			_ = ui.Eval(s)
+		}*/
 	})
 	if err != nil {
 		log.Println(err)

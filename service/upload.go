@@ -298,76 +298,6 @@ func uploadFile(localFile, upKey, etag, id, Authorization string) error {
 	return nil
 }
 
-/*
-func uploadFromProgress(recordPath,upKey, etag, localFile string) error {
-	progressRecord := ProgressRecord{}
-	//==尝试从旧的进度文件中读取进度
-	recordFp, openErr := os.Open(recordPath)
-	if openErr == nil {
-		progressBytes, readErr := ioutil.ReadAll(recordFp)
-		if readErr == nil {
-			mErr := json.Unmarshal(progressBytes, &progressRecord)
-			if mErr == nil {
-				// 检查context 是否过期，避免701错误
-				for _, item := range progressRecord.Progresses {
-					if storage.IsContextExpired(item) {
-						log.Println(item.ExpiredAt)
-						progressRecord.Progresses = make([]storage.BlkputRet, storage.BlockCount(fileSize))
-						break
-					}
-				}
-			}
-		}
-		err := recordFp.Close()
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-	}
-	if len(progressRecord.Progresses) == 0 {
-		progressRecord.Progresses = make([]storage.BlkputRet, storage.BlockCount(fileSize))
-	}
-
-	//配置
-	cfg := storage.Config{}
-	// 空间对应的机房
-	cfg.Zone = &storage.ZoneHuabei
-	// 是否使用https域名
-	cfg.UseHTTPS = false
-	// 上传是否使用CDN上传加速
-	cfg.UseCdnDomains = false
-	resumeUploader := storage.NewResumeUploader(&cfg)
-	ret := storage.PutRet{}
-	progressLock := sync.RWMutex{}
-	putExtra := storage.RputExtra{
-		Progresses: progressRecord.Progresses,
-		Notify: func(blkIdx int, blkSize int, ret *storage.BlkputRet) {
-			progressLock.Lock()
-			progressLock.Unlock()
-			//将进度序列化，然后写入文件
-			progressRecord.Progresses[blkIdx] = *ret
-			progressBytes, _ := json.Marshal(progressRecord)
-			wErr := ioutil.WriteFile(recordPath, progressBytes, 0644)
-			if wErr != nil {
-				log.Println("write progress file error,", wErr)
-			}
-		},
-	}
-	err := resumeUploader.PutFile(context.Background(), &ret, upKey, etag, localFile, &putExtra)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	//上传成功之后，一定记得删除这个进度文件
-	err = os.Remove(recordPath)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	return nil
-}
-*/
-
 //重启上传列表
 func UploadRestartTask(Authorization string) (interface{}, error) {
 	//进度文件夹
@@ -499,10 +429,4 @@ func LocalUpLoadingList() ([]string, error) {
 		pathArr = append(pathArr, v.Name())
 	}
 	return pathArr, nil
-}
-
-func DownloadFile(etag string) error {
-	log.Println(CONF.QiniuAddr + etag)
-
-	return nil
 }
